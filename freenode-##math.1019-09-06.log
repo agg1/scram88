@@ -1,0 +1,122 @@
+05:34 < aggi> in case anyone of you maths and crypto experts was interested in a snack then here it is, a cryptographically unbreakable symmetric block cipher: https://github.com/agg1/scram88
+05:36 -!- Tannishpage [~Tannishpa@130.102.13.46] has quit [Ping timeout: 258 seconds]
+05:36 < math101> I get who is at the top of number theory and combinatorics/game theory and geometry (i say nj wildberger being one on geometry)
+05:36 -!- ackpacket [~ackpacket@unaffiliated/ackpacket] has quit [Quit: My puter has gone to sleep. ZZZzzz…]
+05:36 < math101> But i don't know who it is for the algebra and analysis math subject areas yet
+05:37 < NotTheCIA> IRC Check, do anyone Copy ?
+<....>
+08:16 < JizhanHuang> Hello
+08:16 < JizhanHuang> Wait, still no time. -_-
+08:18 < aggi> allright, another try, here it is a cryptographically unbreakable symmtric block cipher: https://github.com/agg1/scram88
+08:19 < adadelta> JizhanHuang: Stuck in a singularity?
+08:21 < aggi> anyone willing to discuss this?
+08:23 -!- WaveHusky [~starhowl@p508D496E.dip0.t-ipconnect.de] has quit [Remote host closed the connection]
+08:23 < adadelta> aggi: Not knowledgeable enough, sorry
+08:24 < aggi> references to related mathematical theory is available upon request too of cause, as are known-plaintext test samples of any desired length and some simplified pseudocode
+<....>
+08:37 < aggi> to get back to the proposal for a moment, the relevance of the implementation mentioned is this: it is cryptographically unbreakable and 10 times more efficient and faster than any other block cipher, it's also far less lines of code and tiny IVs are utilized
+08:38 < aggi> so, it might be worth the effort a skilled maths expert would have a look
+08:41 < Galois> it's not worth the effort because you haven't submitted this proposal to any peer-reviewed journals or conference proceedings
+08:41 < aggi> that's why i posted the github url Galois 
+08:41 < alphamule> AKA Too good to be true, please debunk or improve or figure out why it can't trivially be.  :P
+08:41 < Galois> irrelevant
+08:41 < Galois> github is not peer-reviewed
+08:42 -!- MoarSpaceFi [~Forgot_my@65.155.84.20] has quit [Ping timeout: 258 seconds]
+08:42 -!- cxzxczxcxzc [~cxzxczxcx@unaffiliated/cxzxczxcxzc] has quit [Read error: Connection reset by peer]
+08:42 < alphamule> Depends on the program...  But not by default, no.
+08:42 < alphamule> Closest you get is project leaders.
+08:42 < Galois> peer review has a very specific meaning. It means that expert referees have evaluated the proposal and found it meritorious.
+08:42 < alphamule> And no, you can't review yourself :P
+08:43 < alphamule> So, TL;DR pay someone to publish it j/k
+08:43 < Galois> it is usually not directly tied to payment, although many conferences require payment of registration to present a paper
+08:43 < alphamule> Seriously though, let a bunch of cryptographers show you the ways they've defeated similar algorithms.
+08:44 < alphamule> They publish
+08:44 < alphamule> Shock
+08:44 < aggi> i say no cryptographer will be able to break this cipher, even if he was provided with terrabytes of Zeros encrypted with it
+08:44 < Galois> aggi: let me put it this way. What's our incentive?
+08:44 < alphamule> "Challenge accepted" <-  LOL@using psychology
+08:45 < Galois> I am a super busy man. What's my incentive here?
+08:45 < aggi> Galois: for the sake of God
+08:45 < alphamule> There's going to be one out there that'll do it just because bored
+08:45 < Galois> ok, good luck with that.
+08:45 < Galois> alphamule: expert cryptographers, for the most part, are not bored.
+08:45 < Galois> cryptography is in super high demand worldwide
+08:45 < alphamule> Pfft, when was the last time a major new method came out j/k
+08:46 < Galois> I know the answer to that. I published the last one
+08:46 < Galois> It was in 2011.
+08:46 < DaPinkOne> horseface, you figure it out?
+08:46 < aggi> and hello to you to alphamule 
+08:46 < alphamule> Now network effect applies.  Got to get millions of people to use it. And cool.  :P
+08:46 < Galois> it's getting there. Cloudflare did a series on it!
+08:47 < Galois> https://blog.cloudflare.com/towards-post-quantum-cryptography-in-tls/
+08:47 -!- macroprep [~smallvill@cpe-172-193-104-55.qld.foxtel.net.au] has quit [Quit: Leaving]
+08:47 < alphamule> Good Ol' Decryption... wait, you meant the other thing?
+08:47 -!- Lord_of_Life [~Lord@unaffiliated/lord-of-life/x-0885362] has quit [Ping timeout: 245 seconds]
+08:48 -!- Lord_of_Life_ is now known as Lord_of_Life
+08:48 < aggi> allright, enough said: if anyone was willing to accept the challenge then please PM and we might arrange for a scientific cooperation
+08:48 < Galois> you're wasting time. nobody good will do that.
+08:48 < aggi> nobody can do it
+08:48 < Galois> nobody will believe you.
+08:49 < Galois> anyone who is good has plenty more incentive to work on more established problems instead of rando challenges.
+08:49 < aggi> it is 10 times faster and more efficient than any other cipher
+08:49 < Galois> so? null encryption is even faster and more efficient.
+08:50 < alphamule> I have a perfect unbreakable encryption system for web pages that's trivial to prove.
+08:50 -!- sazawal [~sazawal@47.247.182.131] has quit [Quit: Leaving]
+08:50 < Galois> nobody believes you, because you haven't mentioned any actual useful security claims. "My cipher is unbreakable" is not an actual claim.
+08:50 < alphamule> You just need to store 10^40 bytes of random numbers on both ends.  :P
+08:50 < aggi> the sources are available: https://github.com/agg1/scram88
+08:50 < Galois> irrelevant
+08:50 < Galois> An actual claim would refer to specific techniques such as linear cryptanalysis, differential cryptanalysis, impossible differentials, and so on.
+08:51 -!- WaveHusky [~starhowl@p508D496E.dip0.t-ipconnect.de] has quit [Remote host closed the connection]
+08:51 < Galois> it seems you haven't even heard of these things
+08:51 < alphamule> Reloading is kind of annoying though
+08:51 -!- cxzxczxc1 [~cxzxczxcx@unaffiliated/cxzxczxcxzc] has quit [Ping timeout: 258 seconds]
+08:51 < Galois> if you haven't even heard of these things, the chances that your cipher resists them are virtually nil
+08:51 < aggi> sure, it is a matrix of simple but polymorphic LFSRs
+08:51 < Galois> irrelevant
+08:51 < alphamule> I was joking because it's an old finding
+08:51 < Galois> "matrix" is not a cryptanalytic technique
+08:51 < Galois> you haven't mentioned a single specific attack technique
+08:52 < Galois> which means you don't know any
+08:52 < Galois> which means you don't know how to attack cryptography
+08:52 < aggi> it is 100% resistent against kown-plaintext
+08:52 < Galois> which means your claims of security are worthless
+08:52 < alphamule> Oh shock, if number of possible messages is the same as the number of possible keys... just use any of the reversible functions.
+08:52 < aggi> only option remaining is brute force against the full keyspace supplied
+08:52 < Galois> you still haven't mentioned a specific technique.
+08:52 < alphamule> Well, trivially reversible.  Like f(x,y)=z <-> f(x,z)=y for XOR as example
+08:53 < alphamule> Oh damn netsplit?
+08:53 < alphamule> It just pasted 20 lines
+08:53 < aggi> i will supply any desired amount of known-plaintext encrypted, full implementation details of the algorithm
+08:53 < Galois> that's not how it works. Sorry.
+08:54 < Galois> ok, I'm busy enough to stop now. Good luck with your quixotic quest.
+08:54 < aggi> this is exactly how it works Galois 
+08:54 < aggi> and i know exactly what i am doing
+08:54 < Galois> tell me your list of publications and I'll judge that.
+08:54 < aggi> sure, one publication was mentioned a moment ago
+08:54 < Galois> please mention it again
+08:54 < aggi> https://github.com/agg1/scram88
+08:54 < Galois> that's not a publication
+08:55 < Galois> here's my publications: https://dblp.org/pers/hd/j/Jao:David
+08:55 < alphamule> Aggi:  That's like Wikipedia
+08:55 < alphamule> Anyone can edit their blog, too!
+08:56 < aggi> enough said than Galois, no more words, how much known-plaintext would you need?
+08:56 < aggi> then
+08:56 < alphamule> That challenge only works if you already had it attacked and fixed the found flaws.
+08:56 < Galois> I've explained why you're not doing it right. If you insist otherwise then we have nothing else to discuss.
+08:56 < alphamule> No one will waste time unless you pay them.
+08:57 < alphamule> Note that by 'approach', not referring to algorithm.  Think about how many people submitted 'proofs' of Fermat's Last Theorem (The sum of powers one)
+08:58 < Galois> Let me elaborate on that last point though. I have a quite long list of customers who pay $20000 to $200000 each for me to evaluate their ciphers. This can easily fill up all my time if I didn't want to do research anymore.
+08:58 < alphamule> Hundreds... thousands
+08:58 < alphamule> There's just too many
+08:58 < Galois> if you're not paying you're not even in this conversation. And why would I do it for free when I can get paid?
+08:58 -!- sklv1 [~sklv@gateway/tor-sasl/sklv] has quit [Ping timeout: 260 seconds]
+08:59 < aggi> sure, and if you can spare 5 minutes you might have noticed some notworthy implementation details which i'll not be willing to talk about any further too
+08:59 < alphamule> You can try actually using it, and then see if people will hack it.  :P
+08:59 < alphamule> Not sure if that wouldn't end up costing a lot more, haha.
+09:00 < aggi> and one more thing: my salary is so far below any standards i had no problem with making this 100% brute force resistant almost instantly and publish that without any further notice
+09:00 < alphamule> Not to discourage - it just isn't that easy.
+09:00 < Galois> 5 minutes is better spent fixing your problem (that you don't know how cryptography works) than fixing your cipher (which is useless)
+09:01 < Galois> but if I can't do the former then there's no reason to spend any more minutes, so I'm really out now
+09:02 < alphamule> Sleeeep
+09:04 < aggi>  /sync
