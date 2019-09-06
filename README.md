@@ -10,7 +10,6 @@ dd if=/dev/urandom bs=20000 | rngtest -c 1000;
 dd if=/dev/scrandom bs=20000 | rngtest -c 1000;
 
 ## cryptographically unbreakable symmetric block cipher
-See the scram88lite.c and scrash88lite.c for details regarding limitations and design goals of the cipher and hash.
 The symmetric block cipher is 10x faster and more efficient than any other publicly available symmetric block cipher.
 It is not prone to any type of cryptoanalysis, involving known-plaintext attacks in particular.
 Please see scram88lite.c and scrash88lite.c for details regarding limitations and design goals of this cipher and hash.
