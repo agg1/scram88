@@ -5,7 +5,7 @@
  * Software Foundation;
  *
  * This is the original implementation of scram88lite 8x8byte weak polymorphic scrambler matrix.
- * It is explicitely intended only for ECB mode with block IV keys having aplied scrash88 hash properly!
+ * It is explicitely intended only for ECB mode with block IV keys having applied scrash88 hash properly!
  * This version of the software may be subject to and remains in compliance with export regulations then.
  *
  * Due to potential legal restrictions scram88full version polymorphic scrambler matrix is not published
@@ -23,7 +23,7 @@
  * - Utilization of 64bit datatypes with optional non-portable 128bit support available with recent CPUs and GCC
  *
  * The effective cipher strength of scram88lite is limited to far below 64bit as all other common ciphers are.
- * Instead no efforts where being made to obfuscate that fact for the purpose to allow studying this particular problem.
+ * Instead no efforts were being made to obfuscate that fact for the purpose to allow studying this particular problem.
  *
  * Upscaling and application of valid operation mode with scram88full version is possible on-demand anytime nonetheless!
  * Choice of parameters for upscaling including mode of operation ecb-plain64 is highly critical to achieve
