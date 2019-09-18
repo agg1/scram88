@@ -127,7 +127,7 @@ static int scram88_set_key(struct crypto_tfm *tfm, const u8 *in_key, unsigned in
 	}
 	return 0;
 }
-// cryptsetup -c scram88-ecb-plain64 open -s 256 -h sha256 --type plain $DEVICE $MD
+// cryptsetup -c scram88-ecb-plain64 open -s 256 -h plain --type plain $DEVICE $MD
 static int ecb_scram88_crypt(struct blkcipher_desc *desc, struct scatterlist *sdst, struct scatterlist *ssrc, unsigned int nbytes) {
 	struct scram_ctx *scr = crypto_blkcipher_ctx(desc->tfm);
 	struct blkcipher_walk walk; int err;
