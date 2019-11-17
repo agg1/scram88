@@ -57,9 +57,7 @@
  *   a random number generator based on scram88full hit 20GB/s memory I/O limit easily for encryption, as a reference
  *   calling all method stubs of dm-crypt.c in-memory without any encryption applied yields 3.5GB/s only in comparison!
  * - userspace support for cryptoloop with scram88
- * - integration with kernel IPSec stack and ipsec userspace tools
  * - integration with SSL library
- * - scram88pipe userspace tool
  * - release of readily available LZX compression kernel module and userspace tools
  *   which combine this scram88lite cipher variant with LZ compression support for squashfs, bzImage and initrd
 */

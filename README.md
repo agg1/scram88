@@ -20,7 +20,7 @@ scram88lite symmetric block cipher and scrash88lite scrambler hash are both patc
 restrictions applied to all publicly available crypto. Nonetheless commercial versions are readily available.
 
 ## publication
-The publication of the high efficiency unbreakably block cipher was announced on freenode.org IRC 6th September 2019.
+The publication of the high efficiency unbreakable block cipher was announced on freenode.org IRC 6th September 2019.
 A scientist from Leibniz Institute for mathematics and computer science,
 funded by German Federal Ministry of Education and Research, responded and the conversation protocol is attached.
 To summarize this conversation briefly: even if funded with $20000 - $200000 it wouldn't be possible to break the cipher.
