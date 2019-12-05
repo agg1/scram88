@@ -149,7 +149,7 @@ static int ecb_scram88_crypt(struct skcipher_request *req) {
 		inp = (const __be64 *)src; outp = (__be64 *)dst;
 		for (s=0; s<SCRAM_SIZE;s++) {
 			scrambler = scr->scrambler[s%SCRAM_BUFNUM]; scrambler ^= sscrash[s%SCRAM_BUFNUM];
-			scram88_shift(&scrambler, s1, s2, s3);
+			scram88_shift(&scrambler, SCRAM_SALT1, SCRAM_SALT2, SCRAM_SALT3);
 			tmp = be64_to_cpu(*inp); tmp ^= scrambler; *outp = cpu_to_be64(tmp); inp++; outp++;
 		}
 		err = skcipher_walk_done(&walk, walk.nbytes - SCRAM_BLOCK_SIZE);
