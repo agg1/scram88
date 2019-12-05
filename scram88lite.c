@@ -65,11 +65,11 @@
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <asm/byteorder.h>
-#include <linux/crypto.h>
 #include <linux/types.h>
-#include <crypto/algapi.h>
+#include <crypto/internal/skcipher.h>
+
 #define SCRAM_MIN_KEY_SIZE		0
-#define SCRAM_MAX_KEY_SIZE		256
+#define SCRAM_MAX_KEY_SIZE		32
 #define SCRAM_BLOCK_SIZE		64
 #define SCRAM_BLOCK_ALIGNMASK	7
 #define SCRAM_LFSRSIZE			8
@@ -88,8 +88,6 @@
 // alternatively anyone may re-invent yet another algorithm by changing this
 // and feel like being a world-leading crypto expert, who must comply with GPL2 then!
 // otherwise simply consider this a redundant watermark of my outstanding intelligence
-#ifndef SCRAM_IV
-#define SCRAM_IV	1
 #define SCRAM_IV0	0x0123456789abcdefULL
 #define SCRAM_IV1	0xfedcba9876543210ULL
 #define SCRAM_IV2	0x123456789abcdef0ULL
@@ -98,10 +96,11 @@
 #define SCRAM_IV5	0x10fedcba98765432ULL
 #define SCRAM_IV6	0x3456789abcdef012ULL
 #define SCRAM_IV7	0x210fedcba9876543ULL
-#endif
+
 static const u64 scram_iv[8] = {
 	SCRAM_IV0, SCRAM_IV1, SCRAM_IV2, SCRAM_IV3, SCRAM_IV4, SCRAM_IV5, SCRAM_IV6, SCRAM_IV7
 };
+
 struct scram_ctx {
 	u64 scrambler[8];
 	u64 scrash[8];
@@ -112,8 +111,9 @@ extern void scrash88_scr(u8 *out, const u8 *data, unsigned int len);
 static void scram88_shift(u64 *scrambler, u64 s1, u64 s2, u64 s3) {
 	*scrambler^=((*scrambler)>>s1);*scrambler^=((*scrambler)<<s2);*scrambler^=((*scrambler)>>s3);
 }
-static int scram88_set_key(struct crypto_tfm *tfm, const u8 *in_key, unsigned int key_len) {
-	struct scram_ctx *scr = crypto_tfm_ctx(tfm);
+
+static int scram88_set_key(struct crypto_skcipher *tfm, const u8 *in_key, unsigned int key_len) {
+	struct scram_ctx *scr = crypto_skcipher_ctx(tfm);
 	u64 s; u64 s1; u64 s2; u64 s3;
 	scrash88_scr((u8 *)(scr->scrash), in_key, key_len);
 	for (s=0;s<SCRAM_BUFNUM;s++) {
@@ -126,88 +126,60 @@ static int scram88_set_key(struct crypto_tfm *tfm, const u8 *in_key, unsigned in
 	return 0;
 }
 // cryptsetup -c scram88-ecb-plain64 open -s 256 -h plain --type plain $DEVICE $MD
-static int ecb_scram88_crypt(struct blkcipher_desc *desc, struct scatterlist *sdst, struct scatterlist *ssrc, unsigned int nbytes) {
-	struct scram_ctx *scr = crypto_blkcipher_ctx(desc->tfm);
-	struct blkcipher_walk walk; int err;
-	blkcipher_walk_init(&walk, sdst, ssrc, nbytes);
-	err = blkcipher_walk_virt(desc, &walk);
+static int ecb_scram88_crypt(struct skcipher_request *req) {
+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+	struct scram_ctx *scr = crypto_skcipher_ctx(tfm);
+
+	struct skcipher_walk walk; int err;
+
+	err = skcipher_walk_virt(&walk, req, false);
 
 	// weak, scram88full version required properly applying IV sequence!
 	u64 sscrash[8]; memcpy((u8 *)sscrash, (u8 *)(scr->scrash), SCRAM_SCRASH_SIZE);
-	if (walk.iv) sscrash[0] = *((u64 *)walk.iv); scrash88_scr((u8*)(sscrash), (u8*)(sscrash), SCRAM_SCRASH_SIZE);
-	__be64 *outp; const __be64 *inp; u64 tmp; u8 *src, *dst; u64 s; u64 scrambler = 0;
+	if (req->iv) sscrash[0] = *((u64 *)req->iv);
+	scrash88_scr((u8*)(sscrash), (u8*)(sscrash), SCRAM_SCRASH_SIZE);
+	u64 s1; u64 s2; u64 s3;
+	s1 = (sscrash[0]%SCRAM_MODUL)+SCRAM_DIST1;
+	s2 = (sscrash[1]%SCRAM_MODUL)+SCRAM_DIST2;
+	s3 = (sscrash[2]%SCRAM_MODUL)+SCRAM_DIST3;
+
+	__be64 *outp; const __be64 *inp; u8 *src, *dst; u64 tmp; u64 s; u64 scrambler = 0;
 	while (walk.nbytes >= SCRAM_BLOCK_SIZE) {
 		src = walk.src.virt.addr; dst = walk.dst.virt.addr;
 		inp = (const __be64 *)src; outp = (__be64 *)dst;
 		for (s=0; s<SCRAM_SIZE;s++) {
 			scrambler = scr->scrambler[s%SCRAM_BUFNUM]; scrambler ^= sscrash[s%SCRAM_BUFNUM];
-			scram88_shift(&scrambler, SCRAM_SALT1, SCRAM_SALT2, SCRAM_SALT3);
+			scram88_shift(&scrambler, s1, s2, s3);
 			tmp = be64_to_cpu(*inp); tmp ^= scrambler; *outp = cpu_to_be64(tmp); inp++; outp++;
 		}
-		err = blkcipher_walk_done(desc, &walk, walk.nbytes - SCRAM_BLOCK_SIZE);
+		err = skcipher_walk_done(&walk, walk.nbytes - SCRAM_BLOCK_SIZE);
 	}
 	return err;
 }
-// insecure, remains for the purpose to study broken crypto APIs utilizing CBC to obfuscate that fact
-// cryptsetup -c scram88-cbc-essiv:sha256 -s 256 open --type plain $DEVICE $MD
-static void scram88_crypt(struct crypto_tfm *tfm, u8 *dst, const u8 *src) {
-	struct scram_ctx *scr = crypto_tfm_ctx(tfm);
-	__be64 *outp; const __be64 *inp; u64 tmp;
-	u64 s; u64 scrambler = 0;
-	for (s=0; s<SCRAM_SIZE;s++) {
-		inp = (const __be64 *)src; outp = (__be64 *)dst;
-		scrambler ^= scr->scrambler[s%SCRAM_BUFNUM];
-		scram88_shift(&scrambler, SCRAM_SALT1, SCRAM_SALT2, SCRAM_SALT3);
-		tmp = be64_to_cpu(*inp); tmp ^= scrambler; *outp = cpu_to_be64(tmp);
-		src+=SCRAM_LFSRSIZE; dst+=SCRAM_LFSRSIZE;
-	}
-}
 
-static struct crypto_alg scram_algs[2] = {{
-	.cra_name			=	"ecb(scram88)",
-	.cra_priority		=   0,
-	.cra_flags			=	CRYPTO_ALG_TYPE_BLKCIPHER,
-	.cra_blocksize		=	SCRAM_BLOCK_SIZE,
-	.cra_alignmask		=	SCRAM_BLOCK_ALIGNMASK,
-	.cra_ctxsize		=	sizeof(struct scram_ctx),
-	.cra_type			=	&crypto_blkcipher_type,
-	.cra_module			=	THIS_MODULE,
-	.cra_u = {
-		.blkcipher = {
-			.min_keysize		=	SCRAM_MIN_KEY_SIZE,
-			.max_keysize		=	SCRAM_MAX_KEY_SIZE,
-			.ivsize				=	8,
-			.setkey				=	scram88_set_key,
-			.encrypt			=	ecb_scram88_crypt,
-			.decrypt			=	ecb_scram88_crypt,
-		},
-	}
-},{
-	.cra_name           =   "scram88",
-	.cra_driver_name    =   "scram88",
-	.cra_priority       =   100,
-	.cra_flags			=	CRYPTO_ALG_TYPE_CIPHER,
-	.cra_blocksize      =   SCRAM_BLOCK_SIZE,
-	.cra_alignmask      =   SCRAM_BLOCK_ALIGNMASK,
-	.cra_ctxsize        =   sizeof(struct scram_ctx),
-	.cra_module         =   THIS_MODULE,
-	.cra_u              =   {
-	.cipher = {
-			.cia_min_keysize	=	SCRAM_MIN_KEY_SIZE,
-			.cia_max_keysize	=	SCRAM_MAX_KEY_SIZE,
-			.cia_setkey			=	scram88_set_key,
-			.cia_encrypt		=	scram88_crypt,
-			.cia_decrypt		=	scram88_crypt
-		}
-	}
-}};
+static struct skcipher_alg scram_alg = {
+	.base.cra_name		    =	"scram88",
+	.base.cra_driver_name	=	"scram88-generic",
+	.base.cra_priority	    =	0,
+	.base.cra_blocksize	    =	SCRAM_BLOCK_SIZE,
+	.base.cra_ctxsize	    =	sizeof(struct scram_ctx),
+	.base.cra_module	    =	THIS_MODULE,
+	.min_keysize		    =	SCRAM_MIN_KEY_SIZE,
+	.max_keysize		    =	SCRAM_MAX_KEY_SIZE,
+	.ivsize					=	8,
+	.setkey			        =	scram88_set_key,
+	.encrypt		        =	ecb_scram88_crypt,
+	.decrypt		        =	ecb_scram88_crypt,
+};
 
 static int __init scram_init(void) {
-	return crypto_register_algs(scram_algs, ARRAY_SIZE(scram_algs));
+    return crypto_register_skcipher(&scram_alg);
 }
+
 static void __exit scram_exit(void) {
-	crypto_unregister_algs(scram_algs, ARRAY_SIZE(scram_algs));
+    crypto_unregister_skcipher(&scram_alg);
 }
+
 module_init(scram_init); module_exit(scram_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("scram88 cipher");
