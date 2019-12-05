@@ -17,19 +17,23 @@
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+//
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/slab.h> 
-#include <linux/fs.h> 
+#include <linux/slab.h>
+#include <linux/fs.h>
 #include <linux/errno.h>
-#include <linux/types.h> 
+#include <linux/types.h>
+//
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/err.h>
 #include <linux/device.h>
+// entropy sources
 #include <linux/utsname.h>
 #include <asm/timex.h>
 #include <linux/random.h>
+//
 #define SCRANDOM_MAJOR 233
 #define SCRANDOM_MINOR 88
 
@@ -43,17 +47,18 @@
 #define SCRANDOM_SALT2 ((SCRANDOM_SALT%SCRANDOM_MODUL)+SCRANDOM_DIST2)
 #define SCRANDOM_SALT3 ((SCRANDOM_SALT%SCRANDOM_MODUL)+SCRANDOM_DIST3)
 #define SCRANDOM_HASHP 1125899906842597ull
+// ~2^(64+424)->~488bit
 #define SCRANDOM_LFSRSIZE 8ul
-#define SCRANDOM_BUFNUM 8ul
+#define SCRANDOM_BUFNUM 425ul
 #define SCRANDOM_BUFSIZE SCRANDOM_BUFNUM*SCRANDOM_LFSRSIZE
 
 struct scrandom {
-	unsigned long *scrambler;
-	unsigned long index; unsigned long reads; unsigned long maxreads;
-	unsigned long s1; unsigned long s2; unsigned long s3;
+	u64 *scrambler;
+	u64 index; u64 reads; u64 maxreads;
+	u64 s1; u64 s2; u64 s3;
 };
 
-static unsigned long global_seed = SCRANDOM_IV;
+static u64 global_seed = SCRANDOM_IV;
 
 static struct file_operations scr_fops;
 static int scr_major = SCRANDOM_MAJOR;
@@ -62,35 +67,35 @@ static struct cdev scr_cdev;
 static struct class *scr_class;
 struct device *scr_dev;
 MODULE_DESCRIPTION("Ultra-High-Speed pseudo-random number generator");
-MODULE_AUTHOR("Michael Ackermann, aggi");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL"); MODULE_AUTHOR("aggi");
 MODULE_PARM_DESC(scr_major,"major of /dev/scrandom"); MODULE_PARM_DESC(scr_minor,"minor of /dev/scrandom");
+//MODULE_PARM_DESC(scr_bufsize,"buffer size in bytes. default 3400. >= 8");
 
-static void hash64(unsigned char *h) {
-	unsigned int i; unsigned long hashp = SCRANDOM_HASHP;
+static void hash64(u8 *h) {
+	unsigned int i; u64 hashp = SCRANDOM_HASHP;
 	for (i=0; i<63; i++) hashp = 31*hashp + h[i];
 	hashp ^= (hashp>>20)^(hashp>>12); *h = hashp^(hashp>>7)^(hashp>>4);
 }
 static void scrandom_shift(struct scrandom *scr) {
-	scr->index %= SCRANDOM_BUFNUM; unsigned long *scrambler = &(scr->scrambler[scr->index]);
+	scr->index %= SCRANDOM_BUFNUM; u64 *scrambler = &(scr->scrambler[scr->index]);
 	*scrambler^=((*scrambler)>>scr->s1);*scrambler^=((*scrambler)<<scr->s2);*scrambler^=((*scrambler)>>scr->s3);
 }
 
 extern struct uts_namespace init_uts_ns;
 static void scrandom_init(struct scrandom *scr) {
-	unsigned long *pos64, *prev64; char *sysentropy; unsigned long clockentropy = 0;
+	u64 *pos64, *prev64; char *sysentropy; u64 clockentropy = 0;
 	scr->index=0; scr->reads=0; scr->maxreads=9999;
 	scr->s1 = SCRANDOM_SALT1; scr->s2 = SCRANDOM_SALT2; scr->s3 = SCRANDOM_SALT3;
 	pos64 = scr->scrambler;	*pos64 = global_seed;
 	struct timespec tv;
 	while ( scr->index < SCRANDOM_BUFNUM ) {
-		if ( scr->index > 0) { *pos64 = *prev64; hash64((unsigned char *)pos64); }
+		if ( scr->index > 0) { *pos64 = *prev64; hash64((u8 *)pos64); }
 		*pos64 ^= get_random_u64();
-		clockentropy = get_cycles(); if (clockentropy != 0) *pos64 ^= clockentropy;
+		clockentropy = get_cycles(); *pos64 ^= clockentropy;
 		getnstimeofday(&tv); if (tv.tv_nsec != 0) *pos64 ^= tv.tv_nsec;
 		sysentropy = (char *)&((&init_uts_ns.name)[(scr->index)%(sizeof(init_uts_ns.name))]);
-		if (sysentropy && *sysentropy) *pos64 ^= (unsigned long)*sysentropy;
-		hash64((unsigned char *)pos64); scrandom_shift(scr); scr->index++; prev64 = pos64; pos64++;
+		if (sysentropy && *sysentropy) *pos64 ^= (u64)*sysentropy;
+		hash64((u8 *)pos64); scrandom_shift(scr); scr->index++; prev64 = pos64; pos64++;
 	}
 	pos64 = scr->scrambler;	global_seed = *pos64;
 	scr->s1=((*pos64)%SCRANDOM_MODUL)+SCRANDOM_DIST1;
@@ -114,18 +119,18 @@ static int scrandom_release(struct inode *inode, struct file *filp) {
 }
 ssize_t scrandom_read(struct file *filp, char *buf, size_t count, loff_t *f_pos) {
 	struct scrandom *scr = filp->private_data;
-	unsigned long done_bytes = 0; scr->index=0;
+	u64 done_bytes = 0; scr->index=0;
 	while ( (done_bytes+SCRANDOM_BUFSIZE) <= count ) { // ~10GB/s max
 		while ( scr->index < SCRANDOM_BUFNUM ) { scrandom_shift(scr); scr->index++; }
-		copy_to_user(buf, (unsigned char *)(scr->scrambler), SCRANDOM_BUFSIZE);
+		copy_to_user(buf, (u8 *)(scr->scrambler), SCRANDOM_BUFSIZE);
 		buf+=SCRANDOM_BUFSIZE; done_bytes+=SCRANDOM_BUFSIZE;
 	}
 	while ( (done_bytes+SCRANDOM_LFSRSIZE) <= count ) { // ~250GB/s max
-		scrandom_shift(scr); copy_to_user(buf, (unsigned char *)&(scr->scrambler[scr->index]), SCRANDOM_LFSRSIZE);
+		scrandom_shift(scr); copy_to_user(buf, (u8 *)&(scr->scrambler[scr->index]), SCRANDOM_LFSRSIZE);
 		buf+=SCRANDOM_LFSRSIZE; done_bytes+=SCRANDOM_LFSRSIZE; scr->index++;
 	}
-	if ( done_bytes < count ) { // 
-		scrandom_shift(scr); copy_to_user(buf, (unsigned char *)&(scr->scrambler[scr->index]), count - done_bytes);
+	if ( done_bytes < count ) { //
+		scrandom_shift(scr); copy_to_user(buf, (u8 *)&(scr->scrambler[scr->index]), count - done_bytes);
 		scr->index++;
 	}
 	return count;
@@ -162,7 +167,9 @@ error3: unregister_chrdev_region(MKDEV(scr_major, scr_minor), 1);
 error2: cdev_del(&scr_cdev);
 error1: class_destroy(scr_class);
 error0: printk(KERN_ALERT "scrandom: failed to register class scrng\n");
-		return result;	
+		return result;
 }
+//static u64 scr_bufsize = SCRANDOM_BUFSIZE; module_param(scr_bufsize, long, 0);
 module_param(scr_major, int, 0); module_param(scr_minor, int, 0);
 module_init(scrandom_init_module); module_exit(scrandom_cleanup_module);
+//EXPORT_SYMBOL(scrandom_get_random_bytes);
