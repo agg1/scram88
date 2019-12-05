@@ -33,6 +33,7 @@
 #include <asm/time.h>
 #include <asm/timex.h>
 
+int __init rand_initialize(void) { return 0; }
 // method stubs required by kernel
 void add_device_randomness(const void *buf, unsigned int size){}
 EXPORT_SYMBOL(add_device_randomness);
@@ -68,28 +69,29 @@ EXPORT_SYMBOL_GPL(add_hwgenerator_randomness);
 #define RANDOM_SALT2 ((RANDOM_SALT%RANDOM_MODUL)+RANDOM_DIST2)
 #define RANDOM_SALT3 ((RANDOM_SALT%RANDOM_MODUL)+RANDOM_DIST3)
 #define RANDOM_HASHP 1125899906842597ull
+// ~2^(64+424)->~488bit
 #define RANDOM_LFSRSIZE 8ul
-#define RANDOM_BUFNUM 8ul
+#define RANDOM_BUFNUM 425ul
 #define RANDOM_BUFSIZE RANDOM_BUFNUM*RANDOM_LFSRSIZE
 
 struct scrandom {
-	unsigned long *scrambler;
-	unsigned long index; unsigned long reads; unsigned long maxreads;
-	unsigned long s1; unsigned long s2; unsigned long s3;
+	u64 *scrambler;
+	u64 index; u64 reads; u64 maxreads;
+	u64 s1; u64 s2; u64 s3;
 };
 
-static unsigned long global_scrambler[RANDOM_BUFNUM];
+static u64 global_scrambler[RANDOM_BUFNUM];
 static struct scrandom global_scr;
 static unsigned int global_init = 0;
-static unsigned long global_seed = RANDOM_IV;
+static u64 global_seed = RANDOM_IV;
 
-static void hash64(unsigned char *h) {
-	unsigned int i; unsigned long hashp = RANDOM_HASHP;
+static void hash64(u8 *h) {
+	unsigned int i; u64 hashp = RANDOM_HASHP;
 	for (i=0; i<63; i++) hashp = 31*hashp + h[i];
 	hashp ^= (hashp>>20)^(hashp>>12); *h = hashp^(hashp>>7)^(hashp>>4);
 }
 static void scrand_shift(struct scrandom *scr) {
-	scr->index %= RANDOM_BUFNUM; unsigned long *scrambler = &(scr->scrambler[scr->index]);
+	scr->index %= RANDOM_BUFNUM; u64 *scrambler = &(scr->scrambler[scr->index]);
 	*scrambler^=((*scrambler)>>scr->s1);*scrambler^=((*scrambler)<<scr->s2);*scrambler^=((*scrambler)>>scr->s3);
 }
 static DEFINE_SPINLOCK(scr_spinlock);
@@ -101,7 +103,7 @@ static __init int get_random_boot_seed(char *str) {
     get_option(&str, &random_boot_seed); return 1;
 }
 __setup("random_seed=", get_random_boot_seed);
-static void get_global_random_bytes(unsigned long *buf) {
+static void get_global_random_bytes(u64 *buf) {
 	spin_lock(&scr_spinlock);
 	if (global_init == 0) {
 		global_scr.scrambler = global_scrambler;
@@ -111,14 +113,14 @@ static void get_global_random_bytes(unsigned long *buf) {
 		global_init = 1;
 	}
 	if (global_scr.reads%global_scr.maxreads == 0) {
-		unsigned long *pos64, *prev64; char *sysentropy; unsigned long clockentropy; global_scr.index = 0;
+		u64 *pos64, *prev64; char *sysentropy; u64 clockentropy; global_scr.index = 0;
 		pos64 = global_scr.scrambler; *pos64 = global_seed;
 		while ( global_scr.index < RANDOM_BUFNUM ) {
-			if (global_scr.index > 0) { *pos64 = *prev64; hash64((unsigned char *)pos64); }
-			clockentropy = get_cycles(); if (clockentropy != 0) *pos64 ^= clockentropy;
+			if (global_scr.index > 0) { *pos64 = *prev64; hash64((u8 *)pos64); }
+			clockentropy = get_cycles(); *pos64 ^= clockentropy;
 			sysentropy = (char *)&((&init_uts_ns.name)[(global_scr.index)%(sizeof(init_uts_ns.name))]);
-			if (sysentropy && *sysentropy) *pos64 ^= (unsigned long)*sysentropy;
-			hash64((unsigned char *)pos64); scrand_shift(&global_scr); global_scr.index++; prev64=pos64; pos64++;
+			if (sysentropy && *sysentropy) *pos64 ^= (u64)*sysentropy;
+			hash64((u8 *)pos64); scrand_shift(&global_scr); global_scr.index++; prev64=pos64; pos64++;
 		}
 		pos64 = global_scr.scrambler; global_scr.reads = *pos64 % global_scr.maxreads; global_scr.index = 0;
 		global_scr.s1=((*pos64)%RANDOM_MODUL)+RANDOM_DIST1; pos64++;
@@ -134,7 +136,7 @@ static void get_global_random_bytes(unsigned long *buf) {
 void get_random_bytes(void *buf, int nbytes) {
 	int left = nbytes; char *p = buf;
 	while (left) {
-		unsigned long v; int chunk = min_t(int, left, sizeof(unsigned long));
+		u64 v; int chunk = min_t(int, left, sizeof(u64));
 		get_global_random_bytes(&v); memcpy(p, &v, chunk); p += chunk; left -= chunk;
 	}
 }
@@ -143,7 +145,7 @@ EXPORT_SYMBOL(get_random_bytes);
 int __must_check get_random_bytes_arch(void *buf, int nbytes) {
 	int left = nbytes; char *p = buf;
 	while (left) {
-		unsigned long v; int chunk = min_t(int, left, sizeof(unsigned long));
+		u64 v; int chunk = min_t(int, left, sizeof(u64));
 		get_global_random_bytes(&v); memcpy(p, &v, chunk); p += chunk; left -= chunk;
 	}
 	return nbytes - left;
@@ -153,15 +155,15 @@ EXPORT_SYMBOL(get_random_bytes_arch);
 SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, nbytes, unsigned int, flags) {
 	int left = nbytes; char *p = buf;
 	while (left) {
-		unsigned long v; int chunk = min_t(int, left, sizeof(unsigned long));
+		u64 v; int chunk = min_t(int, left, sizeof(u64));
 		get_global_random_bytes(&v); copy_to_user(p, &v, chunk); p += chunk; left -= chunk;
 	}
 	return nbytes - left;
 }
 
-u64 get_random_u64(void) { unsigned long ret; get_global_random_bytes(&ret); return (u64)ret; }
+u64 get_random_u64(void) { u64 ret; get_global_random_bytes(&ret); return (u64)ret; }
 EXPORT_SYMBOL(get_random_u64);
-u32 get_random_u32(void) { u32 ret; get_random_bytes((char *)&ret, 4); return ret; }
+u32 get_random_u32(void) { u32 ret; get_random_bytes((u8 *)&ret, 4); return ret; }
 EXPORT_SYMBOL(get_random_u32);
 
 /*
@@ -186,18 +188,18 @@ unsigned long randomize_page(unsigned long start, unsigned long range) {
 
 // methods for read() from /dev/random and /dev/urandom
 static void scrambler_init(struct scrandom *scr) {
-	unsigned long *pos64, *prev64; char *sysentropy; unsigned long clockentropy = 0;
+	u64 *pos64, *prev64; char *sysentropy; u64 clockentropy = 0;
 	scr->index=0; scr->reads=0; scr->maxreads=9999;
 	scr->s1 = RANDOM_SALT1; scr->s2 = RANDOM_SALT2; scr->s3 = RANDOM_SALT3;
 	pos64 = scr->scrambler;	*pos64 = global_seed;
 	struct timespec tv;
 	while ( scr->index < RANDOM_BUFNUM ) {
-		if ( scr->index > 0) { *pos64 = *prev64; hash64((unsigned char *)pos64); }
+		if ( scr->index > 0) { *pos64 = *prev64; hash64((u8 *)pos64); }
 		clockentropy = get_cycles(); if (clockentropy != 0) *pos64 ^= clockentropy;
 		sysentropy = (char *)&((&init_uts_ns.name)[(scr->index)%(sizeof(init_uts_ns.name))]);
 		getnstimeofday(&tv); if (tv.tv_nsec != 0) *pos64 ^= tv.tv_nsec;
-		if (sysentropy && *sysentropy) *pos64 ^= (unsigned long)*sysentropy;
-		hash64((unsigned char *)pos64); scrand_shift(scr); scr->index++; prev64=pos64; pos64++;
+		if (sysentropy && *sysentropy) *pos64 ^= (u64)*sysentropy;
+		hash64((u8 *)pos64); scrand_shift(scr); scr->index++; prev64=pos64; pos64++;
 	}
 	pos64 = scr->scrambler; global_seed = *pos64;
 	scr->s1=((*pos64)%RANDOM_MODUL)+RANDOM_DIST1;
@@ -205,18 +207,18 @@ static void scrambler_init(struct scrandom *scr) {
 	scr->s3=((*pos64)%RANDOM_MODUL)+RANDOM_DIST3;
 }
 static void scramble(struct scrandom *scr, char __user *buf, size_t count) {
-	unsigned long done_bytes = 0; scr->index=0;
+	u64 done_bytes = 0; scr->index=0;
 	while ( (done_bytes+RANDOM_BUFSIZE) <= count ) {
 		while ( scr->index < RANDOM_BUFNUM ) { scrand_shift(scr); scr->index++; }
-		copy_to_user(buf, (unsigned char *)(scr->scrambler), RANDOM_BUFSIZE);
+		copy_to_user(buf, (u8 *)(scr->scrambler), RANDOM_BUFSIZE);
 		buf+=RANDOM_BUFSIZE; done_bytes+=RANDOM_BUFSIZE;
 	}
 	while ( (done_bytes+RANDOM_LFSRSIZE) <= count ) {
-		scrand_shift(scr); copy_to_user(buf, (unsigned char *)&(scr->scrambler[scr->index]), RANDOM_LFSRSIZE);
+		scrand_shift(scr); copy_to_user(buf, (u8 *)&(scr->scrambler[scr->index]), RANDOM_LFSRSIZE);
 		buf+=RANDOM_LFSRSIZE; done_bytes+=RANDOM_LFSRSIZE; scr->index++;
 	}
 	if ( done_bytes < count ) {
-		scrand_shift(scr); copy_to_user(buf, (unsigned char *)&(scr->scrambler[scr->index]), count - done_bytes);
+		scrand_shift(scr); copy_to_user(buf, (u8 *)&(scr->scrambler[scr->index]), count - done_bytes);
 		scr->index++;
 	}
 }
